@@ -124,6 +124,7 @@ textarea{font:inherit;padding:9px 10px;border:1px solid var(--line);border-radiu
   <nav>
     <button data-v="kasir" class="on">Kasir</button>
     <button data-v="riwayat">Riwayat</button>
+    <button data-v="hutang">Hutang</button>
     <button data-v="produk">Produk</button>
     <button data-v="laporan">Laporan</button>
     <button data-v="printer">Printer</button>
@@ -140,7 +141,7 @@ textarea{font:inherit;padding:9px 10px;border:1px solid var(--line);border-radiu
           <input id="cari" placeholder="Scan barcode atau ketik nama produk, lalu Enter" aria-label="Scan barcode atau cari nama produk" autocomplete="off">
           <div id="sugg" class="sugg"></div>
         </div>
-        <div class="hint">Setelah scan terakhir: <b>Enter</b> pindah ke kolom bayar, ketik nominal lalu <b>Enter</b> untuk bayar, <b>Enter</b> cetak struk, <b>Esc</b> transaksi baru. Pintasan: F2 uang pas, F3 50rb, F4 100rb; F5 split payment; F10 pending; F6 tunai, F7 QRIS, F8 debit, F9 kredit.</div>
+        <div class="hint">Setelah scan terakhir: <b>Enter</b> pindah ke kolom bayar, ketik nominal lalu <b>Enter</b> untuk bayar, <b>Enter</b> cetak struk, <b>Esc</b> transaksi baru. Pintasan: F2 uang pas, F3 50rb, F4 100rb; F5 split payment; F10 pending; tombol Hutang untuk bon pelanggan; F6 tunai, F7 QRIS, F8 debit, F9 kredit.</div>
         <div id="cart" style="overflow-x:auto"></div>
       </div>
       <div class="panel">
@@ -150,14 +151,22 @@ textarea{font:inherit;padding:9px 10px;border:1px solid var(--line);border-radiu
           <button class="btn ghost" data-m="QRIS">QRIS (F7)</button>
           <button class="btn ghost" data-m="Debit">Debit (F8)</button>
           <button class="btn ghost" data-m="Kredit">Kredit (F9)</button>
+          <button class="btn ghost" data-m="Hutang">Hutang (bon)</button>
         </div>
         <button class="btn ghost sm" id="splitBtn" type="button" style="margin:-4px 0 10px">Split payment (F5)</button>
         <div id="splitBox" style="display:none;gap:6px;margin-bottom:8px">
-          <div class="hint" style="margin:0">Isi nominal tiap metode. Sisa otomatis dibayar tunai (kosongkan tunai = uang pas).</div>
+          <div class="hint" style="margin:0">Isi nominal tiap metode. Sisa otomatis dibayar tunai (kosongkan tunai = uang pas). Bagian hutang (bon) butuh pelanggan.</div>
           <div class="sprow"><label for="sp_QRIS">QRIS</label><input id="sp_QRIS" type="text" inputmode="numeric" placeholder="0" autocomplete="off"><button class="btn ghost sm" type="button" data-sisa="QRIS">Sisa</button></div>
           <div class="sprow"><label for="sp_Debit">Debit</label><input id="sp_Debit" type="text" inputmode="numeric" placeholder="0" autocomplete="off"><button class="btn ghost sm" type="button" data-sisa="Debit">Sisa</button></div>
           <div class="sprow"><label for="sp_Kredit">Kredit</label><input id="sp_Kredit" type="text" inputmode="numeric" placeholder="0" autocomplete="off"><button class="btn ghost sm" type="button" data-sisa="Kredit">Sisa</button></div>
+          <div class="sprow"><label for="sp_Hutang">Hutang (bon)</label><input id="sp_Hutang" type="text" inputmode="numeric" placeholder="0" autocomplete="off"><button class="btn ghost sm" type="button" data-sisa="Hutang">Sisa</button></div>
           <div class="sprow"><label for="sp_Tunai">Tunai diterima</label><input id="sp_Tunai" type="text" inputmode="numeric" placeholder="0" autocomplete="off"><span></span></div>
+        </div>
+        <div id="pelWrap" style="display:none;margin-bottom:8px">
+          <label for="pelCari">Pelanggan (hutang)</label>
+          <input id="pelCari" list="pelList" placeholder="Ketik nama pelanggan, lalu pilih" autocomplete="off">
+          <datalist id="pelList"></datalist>
+          <div class="hint" id="pelInfo" style="margin:4px 0 0"></div>
         </div>
         <div id="bayarWrap">
         <label>Uang bayar</label>
@@ -204,6 +213,29 @@ textarea{font:inherit;padding:9px 10px;border:1px solid var(--line);border-radiu
     </div>
   </section>
 
+  <section id="hutang" class="view">
+    <div class="stats">
+      <div class="panel stat"><span>Total hutang pelanggan</span><b id="hTotal">-</b></div>
+    </div>
+    <div class="panel" id="pelForm" style="margin-bottom:14px">
+      <b>Data pelanggan (Admin)</b>
+      <div class="form" style="margin:8px 0 0">
+        <input type="hidden" id="plId">
+        <div><label for="plNama">Nama</label><input id="plNama" autocomplete="off" maxlength="60"></div>
+        <div><label for="plHp">Nomor HP</label><input id="plHp" inputmode="tel" autocomplete="off" maxlength="20"></div>
+        <div><label for="plAlamat">Alamat (opsional)</label><input id="plAlamat" autocomplete="off" maxlength="100"></div>
+        <div><label for="plBatas">Batas hutang (Rp, 0 = tanpa batas)</label><input id="plBatas" type="text" inputmode="numeric" placeholder="0" autocomplete="off"></div>
+        <div><label for="plAktif">Status</label><select id="plAktif"><option value="Ya">Aktif</option><option value="Tidak">Nonaktif (tidak bisa berhutang)</option></select></div>
+        <button class="btn" id="plSimpan">Simpan pelanggan</button>
+        <button class="btn ghost" id="plBaru" type="button">Kosongkan form</button>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="form"><div><label for="hCariPel">Cari pelanggan</label><input id="hCariPel" placeholder="Nama atau nomor HP" autocomplete="off"></div></div>
+      <div style="overflow-x:auto"><table><thead><tr><th>Pelanggan</th><th>HP</th><th class="r">Hutang</th><th class="r">Batas</th><th></th></tr></thead><tbody id="hbody"></tbody></table></div>
+    </div>
+  </section>
+
   <section id="laporan" class="view">
     <div class="panel" style="margin-bottom:14px">
       <div class="form" style="margin:0">
@@ -217,6 +249,7 @@ textarea{font:inherit;padding:9px 10px;border:1px solid var(--line);border-radiu
       <div class="panel stat"><span>Refund hari ini</span><b id="refundinfo" style="font-size:16px">-</b></div>
       <div class="panel stat"><span>Penjualan per shift (sebelum refund)</span><b id="shiftinfo" style="font-size:16px">-</b></div>
       <div class="panel stat"><span>Omzet per metode (setelah refund)</span><b id="metodeinfo" style="font-size:16px">-</b></div>
+      <div class="panel stat"><span>Total hutang pelanggan</span><b id="piutangInfo" style="font-size:16px">-</b></div>
     </div>
     <div class="panel" style="overflow-x:auto"><table><thead><tr><th>ID</th><th>Waktu</th><th>Kasir</th><th>Shift</th><th>Metode</th><th class="r">Total</th></tr></thead><tbody id="ltbody"></tbody></table></div>
     <div class="panel" style="overflow-x:auto;margin-top:14px"><b>Riwayat shift dan selisih kas</b>
@@ -305,6 +338,22 @@ textarea{font:inherit;padding:9px 10px;border:1px solid var(--line);border-radiu
     <button class="btn ghost" id="tutup">Transaksi baru (Esc)</button>
   </div>
 </div></div>
+<div class="modal" id="mHutang"><div class="box" style="max-width:520px">
+  <h3 id="hdNama" style="margin:0"></h3>
+  <div id="hdInfo" style="color:var(--muted)"></div>
+  <div id="hdForm" style="display:grid;gap:6px">
+    <label for="hdNominal">Nominal pembayaran (Rp)</label>
+    <input id="hdNominal" type="text" inputmode="numeric" placeholder="0" autocomplete="off">
+    <div class="tools"><button class="btn ghost sm" id="hdLunas" type="button">Bayar lunas</button></div>
+    <label for="hdMetode">Metode pembayaran</label>
+    <select id="hdMetode"><option>Tunai</option><option>QRIS</option><option>Debit</option><option>Kredit</option></select>
+    <div id="hdRefWrap" style="display:none"><label for="hdRef">No. referensi (opsional)</label><input id="hdRef" autocomplete="off" maxlength="40"></div>
+    <label for="hdCatatan">Catatan (opsional)</label><input id="hdCatatan" autocomplete="off" maxlength="100">
+    <button class="btn pay" id="hdBayar">Terima pembayaran (Enter)</button>
+  </div>
+  <div style="overflow:auto;max-height:240px"><table><thead><tr><th>Waktu</th><th>Jenis</th><th class="r">Nominal</th><th>Ket.</th></tr></thead><tbody id="hdRiwayat"></tbody></table></div>
+  <button class="btn ghost" id="hdTutup">Tutup (Esc)</button>
+</div></div>
 <div class="modal" id="mBuka"><div class="box">
   <h3 style="margin:0">Buka shift</h3>
   <p style="margin:0;color:var(--muted)">Hitung uang tunai di laci kasir, lalu isi sebagai modal awal.</p>
@@ -380,7 +429,7 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>'
 // Input nominal uang: otomatis diberi titik ribuan
 const num = id => { const d = $('#' + id).value.replace(/\D/g, ''); return d === '' ? NaN : Number(d); };
 const setNum = (id, n) => { $('#' + id).value = (n === '' || n == null || isNaN(n)) ? '' : Number(n).toLocaleString('id-ID'); };
-['bayar', 'modalAwal', 'kasFisik', 'pharga', 'ganti', 'sp_QRIS', 'sp_Debit', 'sp_Kredit', 'sp_Tunai'].forEach(id => $('#' + id).addEventListener('input', e => {
+['bayar', 'modalAwal', 'kasFisik', 'pharga', 'ganti', 'sp_QRIS', 'sp_Debit', 'sp_Kredit', 'sp_Hutang', 'sp_Tunai', 'plBatas', 'hdNominal'].forEach(id => $('#' + id).addEventListener('input', e => {
   const d = e.target.value.replace(/\D/g, '');
   e.target.value = d ? Number(d).toLocaleString('id-ID') : '';
 }));
@@ -421,6 +470,7 @@ document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
   b.classList.add('on'); $('#' + b.dataset.v).classList.add('on');
   if (b.dataset.v === 'laporan') loadReport();
   if (b.dataset.v === 'riwayat') loadRiwayat();
+  if (b.dataset.v === 'hutang') loadPelanggan();
   if (b.dataset.v === 'kasir') fokus();
 });
 
@@ -508,21 +558,23 @@ function renderCart() {
 $('#cart').onclick = e => { const b = e.target.closest('button'); if (b) add(b.dataset.id, +b.dataset.d); };
 // Split payment: non tunai pas, sisa dibayar tunai
 let splitOn = false;
-const SPM = ['QRIS', 'Debit', 'Kredit'];
+const SPM = ['QRIS', 'Debit', 'Kredit', 'Hutang'];
 function splitNums() {
   const o = {};
   SPM.concat('Tunai').forEach(m => { const v = num('sp_' + m); o[m] = isNaN(v) ? 0 : v; });
-  o.non = o.QRIS + o.Debit + o.Kredit;
+  o.non = o.QRIS + o.Debit + o.Kredit + o.Hutang; // hutang dihitung pas seperti non tunai
   return o;
 }
 function hitungSplit() {
   const t = totalCart(), n = splitNums(), sisa = t - n.non;
   let msg;
   if (n.non > t) msg = 'Non tunai melebihi total ' + rp(n.non - t);
-  else if (sisa === 0) msg = n.Tunai ? 'Sudah lunas non tunai, kosongkan tunai' : 'Lunas (non tunai)';
+  else if (sisa === 0) msg = n.Tunai ? 'Sudah lunas non tunai, kosongkan tunai' : 'Lunas (non tunai / hutang)';
   else { const tr = n.Tunai || sisa; msg = 'Sisa tunai ' + rp(sisa) + (tr >= sisa ? ' | Kembalian: ' + rp(tr - sisa) : ' | Kurang: ' + rp(sisa - tr)); }
   $('#kembali').textContent = msg;
   $('#sp_Tunai').placeholder = sisa > 0 ? 'Sisa ' + rp(sisa) : '0';
+  $('#pelWrap').style.display = n.Hutang > 0 ? '' : 'none';
+  if (n.Hutang > 0) infoPel();
 }
 function enterSplit() {
   if (!Object.keys(cart).length) return toast('Keranjang masih kosong', true);
@@ -538,6 +590,7 @@ function leaveSplit() {
   splitOn = false;
   $('#splitBox').style.display = 'none'; $('#bayarWrap').style.display = '';
   $('#splitBtn').classList.remove('on'); $('#splitBtn').textContent = 'Split payment (F5)';
+  $('#pelWrap').style.display = 'none';
 }
 $('#splitBtn').onclick = () => { if (splitOn) setMetode('Tunai', true); else enterSplit(); };
 document.querySelectorAll('[data-sisa]').forEach(b => b.onclick = () => {
@@ -545,16 +598,17 @@ document.querySelectorAll('[data-sisa]').forEach(b => b.onclick = () => {
   const lain = n.non - n[m];
   setNum('sp_' + m, Math.max(0, totalCart() - lain)); hitungSplit(); $('#sp_Tunai').focus();
 });
-const SP_URUT = ['sp_QRIS', 'sp_Debit', 'sp_Kredit', 'sp_Tunai'];
+const SP_URUT = ['sp_QRIS', 'sp_Debit', 'sp_Kredit', 'sp_Hutang', 'sp_Tunai'];
 SP_URUT.forEach((id, i) => {
   $('#' + id).addEventListener('input', hitungSplit);
   $('#' + id).onkeydown = e => {
-    if (e.key === 'Enter') { e.preventDefault(); if (i < 3) $('#' + SP_URUT[i + 1]).focus(); else $('#bayarBtn').click(); }
+    if (e.key === 'Enter') { e.preventDefault(); if (i < SP_URUT.length - 1) $('#' + SP_URUT[i + 1]).focus(); else $('#bayarBtn').click(); }
     else if (e.key === 'Escape') { $('#cari').focus(); }
   };
 });
 function hitung() {
   if (splitOn) return hitungSplit();
+  if (metode === 'Hutang') { $('#kembali').textContent = 'Dicatat sebagai hutang pelanggan (belum ada uang masuk)'; return; }
   if (metode !== 'Tunai') { $('#kembali').textContent = 'Pembayaran ' + metode + ': nominal pas'; return; }
   const k = (num('bayar') || 0) - totalCart();
   $('#kembali').textContent = k >= 0 ? 'Kembalian: ' + rp(k) : 'Kurang: ' + rp(-k);
@@ -562,7 +616,7 @@ function hitung() {
 $('#bayar').oninput = hitung;
 $('#pas').onclick = () => { setNum('bayar', totalCart()); hitung(); };
 document.querySelectorAll('[data-q]').forEach(b => b.onclick = () => { setNum('bayar', +b.dataset.q); hitung(); });
-$('#kosong').onclick = () => { cart = {}; $('#ref').value = ''; setMetode('Tunai'); renderCart(); };
+$('#kosong').onclick = () => { cart = {}; $('#ref').value = ''; $('#pelCari').value = ''; setMetode('Tunai'); renderCart(); };
 
 $('#bayarBtn').onclick = async () => {
   const total = totalCart(), bayar = num('bayar') || 0;
@@ -578,15 +632,22 @@ $('#bayarBtn').onclick = async () => {
     if (n.non > total) return toast('Non tunai melebihi total', true);
     if (sisa === 0 && n.Tunai) return toast('Sudah lunas non tunai, kosongkan tunai', true);
     if (sisa > 0 && (n.Tunai || sisa) < sisa) return toast('Uang tunai kurang ' + rp(sisa - n.Tunai), true);
-    pays = SPM.filter(m => n[m] > 0).map(m => ({ m, j: n[m], ref: $('#ref').value }));
+    pays = SPM.filter(m => n[m] > 0).map(m => ({ m, j: n[m], ref: m === 'Hutang' ? '' : $('#ref').value }));
     if (sisa > 0) pays.push({ m: 'Tunai', j: n.Tunai || sisa });
     if (pays.length < 2) return toast('Split payment butuh minimal 2 metode. Pilih metode biasa jika hanya satu.', true);
   } else if (bayar < total) return toast('Uang bayar kurang', true);
+  let pelId = '';
+  if (splitOn ? splitNums().Hutang > 0 : metode === 'Hutang') {
+    const pl = pelTerpilih();
+    if (!pl) { $('#pelCari').focus(); return toast('Pilih pelanggan dari daftar untuk transaksi hutang', true); }
+    pelId = pl.id;
+  }
   const btn = $('#bayarBtn'); btn.disabled = true; btn.textContent = 'Memproses…';
   try {
-    const r = await run('checkout', Object.entries(cart).map(([id, qty]) => ({ id, qty })), bayar, metode, $('#ref').value, pays);
+    const r = await run('checkout', Object.entries(cart).map(([id, qty]) => ({ id, qty })), bayar, metode, $('#ref').value, pays, pelId);
     produk = r.produk; struk(r);
-    cart = {}; $('#ref').value = ''; setMetode('Tunai'); renderAll();
+    cart = {}; $('#ref').value = ''; $('#pelCari').value = ''; setMetode('Tunai'); renderAll();
+    if (r.pelanggan) loadPelanggan();
   } catch (e) { toast(e.message, true); }
   btn.disabled = false; btn.textContent = 'Bayar';
 };
@@ -602,10 +663,12 @@ function tampilModalStruk(html, cetakLabel, tutupLabel, meta) {
 }
 function bayarStruk(r) {
   const bl = r.bayarList, T = layout.tampil;
-  if (bl && bl.length > 1) {
-    const tunai = bl.find(x => x.m === 'Tunai'), non = bl.filter(x => x.m !== 'Tunai').reduce((a, x) => a + x.j, 0);
-    return `<div class="sec">Pembayaran split</div>` + bl.map(x => ln(esc(x.m) + (x.r ? ' (' + esc(x.r) + ')' : ''), rp(x.j))).join('') +
-      (tunai ? ln('Tunai diterima', rp(r.bayar - non)) + ln('Kembali', rp(r.kembali)) : '');
+  if (bl && (bl.length > 1 || bl[0].m === 'Hutang')) {
+    const tunai = bl.find(x => x.m === 'Tunai'), hut = bl.find(x => x.m === 'Hutang');
+    const non = bl.filter(x => x.m !== 'Tunai' && x.m !== 'Hutang').reduce((a, x) => a + x.j, 0);
+    return `<div class="sec">${bl.length > 1 ? 'Pembayaran split' : 'Pembayaran'}</div>` + bl.map(x => ln(esc(x.m === 'Hutang' ? 'Hutang (bon)' : x.m) + (x.r ? ' (' + esc(x.r) + ')' : ''), rp(x.j))).join('') +
+      (tunai ? ln('Tunai diterima', rp(r.bayar - non)) + ln('Kembali', rp(r.kembali)) : '') +
+      (hut && r.pelanggan ? ln('Pelanggan', esc(r.pelanggan.nama)) + (r.pelanggan.saldo != null ? ln('Total hutang', rp(r.pelanggan.saldo), true) : '') : '');
   }
   return (T.metode ? ln('Metode', esc(r.metode)) + (r.ref ? ln('Ref', esc(r.ref)) : '') : '') + ln('Bayar', rp(r.bayar)) + (r.metode === 'Tunai' ? ln('Kembali', rp(r.kembali)) : '');
 }
@@ -645,7 +708,7 @@ function strukRefund(r) {
   tampilModalStruk(`${kopHtml()}<div style="text-align:center"><b>BUKTI REFUND</b></div><div>${esc(r.refId)}<br>${esc(r.tgl)}<br>Transaksi: ${esc(r.trxId)}<br>Kasir: ${esc(r.kasir)}<br>Disetujui: ${esc(r.approver)}</div><hr>` +
     r.items.map(i => `<div>${esc(i.nama)}</div>` + ln(`${i.qty} x ${rp(i.harga)}`, rp(i.sub))).join('') +
     `<hr>` + ln('Total refund', rp(r.total), true) + `<div>Alasan: ${esc(r.alasan)}</div><hr>` +
-    r.alok.map(a => ln(esc(a.m), rp(a.j)) + `<div class="rfnote">${a.m === 'Tunai' ? 'Uang tunai dikembalikan ke pelanggan' : 'Batalkan lewat mesin EDC / aplikasi ' + esc(a.m)}</div>`).join('') +
+    r.alok.map(a => ln(esc(a.m), rp(a.j)) + `<div class="rfnote">${a.m === 'Tunai' ? 'Uang tunai dikembalikan ke pelanggan' : a.m === 'Hutang' ? 'Mengurangi hutang pelanggan' : 'Batalkan lewat mesin EDC / aplikasi ' + esc(a.m)}</div>`).join('') +
     `<div style="display:flex;gap:16px;margin-top:36px;text-align:center"><div style="flex:1;border-top:1px solid #000;padding-top:4px">Pelanggan</div><div style="flex:1;border-top:1px solid #000;padding-top:4px">Kasir</div></div>`,
     'Cetak bukti refund (Enter)', 'Tutup (Esc)');
 }
@@ -663,18 +726,24 @@ function setMetode(m, fokusKe) {
   leaveSplit();
   metode = m;
   document.querySelectorAll('#metode button').forEach(b => b.classList.toggle('on', b.dataset.m === m));
-  const tunai = m === 'Tunai';
+  const tunai = m === 'Tunai', hut = m === 'Hutang';
   $('#bayar').disabled = !tunai;
   $('#quick').style.display = tunai ? '' : 'none';
-  $('#refwrap').style.display = tunai ? 'none' : '';
+  $('#refwrap').style.display = (tunai || hut) ? 'none' : '';
+  $('#pelWrap').style.display = hut ? '' : 'none';
+  if (hut) infoPel();
   if (tunai) $('#bayar').value = ''; else setNum('bayar', totalCart());
   hitung();
-  if (fokusKe) { const t = tunai ? $('#bayar') : $('#ref'); t.focus(); t.select(); }
+  if (fokusKe) { const t = tunai ? $('#bayar') : hut ? $('#pelCari') : $('#ref'); t.focus(); t.select(); }
 }
 document.querySelectorAll('#metode button').forEach(b => b.onclick = () => {
   if (b.dataset.m !== 'Tunai' && !Object.keys(cart).length) return toast('Keranjang masih kosong', true);
   setMetode(b.dataset.m, true);
 });
+$('#pelCari').onkeydown = e => {
+  if (e.key === 'Enter') { e.preventDefault(); $('#bayarBtn').click(); }
+  else if (e.key === 'Escape') { $('#cari').focus(); }
+};
 $('#ref').onkeydown = e => {
   if (e.key === 'Enter') { e.preventDefault(); $('#bayarBtn').click(); }
   else if (e.key === 'Escape') { $('#cari').focus(); }
@@ -705,6 +774,99 @@ document.addEventListener('keydown', e => {
   if (splitOn || metode !== 'Tunai') setMetode('Tunai');
   setNum('bayar', nominal); hitung(); $('#bayar').focus(); $('#bayar').select();
 });
+
+
+// ===== Hutang / bon pelanggan =====
+let pelanggan = [];
+const namaPel = p => p.nama + ' (' + p.id + ')';
+function terapkanPelanggan() {
+  $('#pelList').innerHTML = pelanggan.filter(p => p.aktif).map(p => `<option value="${esc(namaPel(p))}"></option>`).join('');
+  if ($('#hutang').classList.contains('on')) renderPelanggan();
+  infoPel();
+}
+async function loadPelanggan() {
+  if (!token) return;
+  try { pelanggan = (await run('pelangganList')) || []; terapkanPelanggan(); } catch (e) { toast(e.message, true); }
+}
+function pelTerpilih() { const v = $('#pelCari').value.trim(); return pelanggan.find(p => namaPel(p) === v) || null; }
+function infoPel() {
+  const p = pelTerpilih(), el = $('#pelInfo');
+  if (!p) { el.textContent = $('#pelCari').value ? 'Pilih nama dari daftar yang muncul.' : 'Ketik nama pelanggan, lalu pilih dari daftar.'; return; }
+  el.textContent = 'Hutang saat ini ' + rp(p.saldo) + (p.batas ? ' | batas ' + rp(p.batas) + ' | sisa batas ' + rp(Math.max(0, p.batas - p.saldo)) : ' | tanpa batas');
+}
+$('#pelCari').addEventListener('input', infoPel);
+function renderPelanggan() {
+  const q = $('#hCariPel').value.trim().toLowerCase(), admin = user && user.role === 'Admin';
+  $('#hTotal').textContent = rp(pelanggan.reduce((a, p) => a + Math.max(0, p.saldo), 0));
+  $('#hbody').innerHTML = pelanggan.filter(p => !q || (p.nama + ' ' + p.hp + ' ' + p.id).toLowerCase().includes(q)).map(p => `<tr>
+    <td>${esc(p.nama)}${p.aktif ? '' : ' <span style="color:var(--muted)">(nonaktif)</span>'}<div style="color:var(--muted);font-size:12px">${esc(p.id)}</div></td>
+    <td>${esc(p.hp)}</td>
+    <td class="r" style="font-weight:700;color:${p.saldo > 0 ? 'var(--bad)' : 'inherit'}">${rp(p.saldo)}</td>
+    <td class="r">${p.batas ? rp(p.batas) : 'Tanpa batas'}</td>
+    <td class="r"><button class="btn sm" data-d="${esc(p.id)}">Detail / Bayar</button>${admin ? ` <button class="btn ghost sm" data-u="${esc(p.id)}">Ubah</button>` : ''}</td></tr>`).join('')
+    || '<tr><td colspan="5">Belum ada pelanggan.</td></tr>';
+}
+$('#hCariPel').addEventListener('input', renderPelanggan);
+function kosongFormPel() { ['plId', 'plNama', 'plHp', 'plAlamat', 'plBatas'].forEach(i => $('#' + i).value = ''); $('#plAktif').value = 'Ya'; }
+$('#plBaru').onclick = kosongFormPel;
+$('#plSimpan').onclick = async () => {
+  const p = { id: $('#plId').value, nama: $('#plNama').value.trim(), hp: $('#plHp').value.trim(), alamat: $('#plAlamat').value.trim(),
+    batas: num('plBatas') || 0, aktif: $('#plAktif').value === 'Ya' };
+  if (p.nama.length < 2) return toast('Isi nama pelanggan', true);
+  try { pelanggan = await run('pelangganSimpan', p); kosongFormPel(); terapkanPelanggan(); toast('Pelanggan disimpan'); }
+  catch (e) { toast(e.message, true); }
+};
+let hdPel = null;
+function tutupHutang() { $('#mHutang').classList.remove('on'); }
+async function bukaDetail(id) {
+  try {
+    const r = await run('hutangDetail', id), p = r.pelanggan;
+    hdPel = p;
+    $('#hdNama').textContent = p.nama;
+    $('#hdInfo').innerHTML = 'Hutang saat ini: <b style="color:' + (p.saldo > 0 ? 'var(--bad)' : 'inherit') + '">' + rp(p.saldo) + '</b>' + (p.hp ? ' | HP ' + esc(p.hp) : '') + (p.batas ? ' | Batas ' + rp(p.batas) : ' | Tanpa batas');
+    $('#hdForm').style.display = p.saldo > 0 ? 'grid' : 'none';
+    $('#hdNominal').value = ''; $('#hdRef').value = ''; $('#hdCatatan').value = ''; $('#hdMetode').value = 'Tunai'; $('#hdRefWrap').style.display = 'none';
+    $('#hdRiwayat').innerHTML = r.riwayat.map(x => `<tr><td>${esc(x.waktu)}</td><td>${x.jenis === 'Bon' ? 'Bon' : x.jenis === 'Bayar' ? 'Bayar ' + esc(x.metode) : 'Retur (refund)'}</td>
+      <td class="r" style="color:${x.jenis === 'Bon' ? 'var(--bad)' : 'var(--ok)'}">${x.jenis === 'Bon' ? '+' : '-'} ${rp(x.nominal)}</td><td>${esc(x.trx || x.catatan)}</td></tr>`).join('')
+      || '<tr><td colspan="4">Belum ada riwayat.</td></tr>';
+    $('#mHutang').classList.add('on');
+    if (p.saldo > 0) $('#hdNominal').focus();
+  } catch (e) { toast(e.message, true); }
+}
+$('#hbody').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.d) bukaDetail(b.dataset.d);
+  else if (b.dataset.u) {
+    const p = pelanggan.find(x => x.id === b.dataset.u); if (!p) return;
+    $('#plId').value = p.id; $('#plNama').value = p.nama; $('#plHp').value = p.hp; $('#plAlamat').value = p.alamat;
+    setNum('plBatas', p.batas); $('#plAktif').value = p.aktif ? 'Ya' : 'Tidak'; $('#plNama').focus();
+  }
+};
+$('#hdLunas').onclick = () => { if (hdPel) setNum('hdNominal', hdPel.saldo); $('#hdNominal').focus(); };
+$('#hdMetode').onchange = () => { $('#hdRefWrap').style.display = $('#hdMetode').value === 'Tunai' ? 'none' : ''; };
+$('#hdTutup').onclick = tutupHutang;
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#mHutang').classList.contains('on')) { e.preventDefault(); tutupHutang(); } });
+$('#hdNominal').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); $('#hdBayar').click(); } };
+$('#hdBayar').onclick = async () => {
+  const n = num('hdNominal');
+  if (!(n > 0)) { $('#hdNominal').focus(); return toast('Isi nominal pembayaran', true); }
+  if (!user.shiftId) return toast('Buka shift dulu untuk menerima pembayaran hutang', true);
+  if (hdPel && n > hdPel.saldo) return toast('Pembayaran melebihi hutang (sisa ' + rp(hdPel.saldo) + ')', true);
+  const btn = $('#hdBayar'); btn.disabled = true;
+  try {
+    const r = await run('hutangBayar', hdPel.id, n, $('#hdMetode').value, $('#hdRef').value, $('#hdCatatan').value);
+    tutupHutang(); loadPelanggan(); strukPelunasan(r);
+  } catch (e) { toast(e.message, true); }
+  btn.disabled = false;
+};
+function strukPelunasan(r) {
+  tampilModalStruk(kopHtml() + `<div style="text-align:center"><b>BUKTI PEMBAYARAN HUTANG</b></div><hr>` +
+    [r.id, r.tgl, r.kasir].map(x => `<div>${esc(x)}</div>`).join('') + `<hr>` +
+    ln('Pelanggan', esc(r.pelanggan.nama)) + ln('Hutang sebelumnya', rp(r.sebelum)) + ln('Pembayaran', rp(r.nominal), true) +
+    ln('Metode', esc(r.metode)) + (r.ref ? ln('Ref', esc(r.ref)) : '') + ln('Sisa hutang', rp(r.sesudah), true) +
+    (r.sesudah === 0 ? '<div style="text-align:center"><b>LUNAS</b></div>' : '') + footerHtml(),
+    'Cetak bukti (Enter)', 'Tutup (Esc)', { laci: r.metode === 'Tunai' });
+}
 
 // Produk
 function renderProduk() {
@@ -741,6 +903,7 @@ async function loadReport() {
     $('#omzet').textContent = rp(r.omzet); $('#jml').textContent = r.jumlah;
     $('#refundinfo').textContent = rp(r.refund) + ' (' + r.refundJml + ' refund)';
     $('#shiftinfo').textContent = Object.keys(r.perShift).map(k => k + ': ' + rp(r.perShift[k])).join(' | ') || '-';
+    $('#piutangInfo').textContent = rp(r.piutang);
     $('#metodeinfo').textContent = Object.keys(r.perMetode).map(k => k + ': ' + rp(r.perMetode[k])).join(' | ') || '-';
     $('#ltbody').innerHTML = r.terakhir.map(t => `<tr><td>${esc(t.id)}</td><td>${esc(t.tgl)}</td><td>${esc(t.kasir)}</td><td>${esc(t.shift)}</td><td>${esc(t.metode)}</td><td class="r">${rp(t.total)}</td></tr>`).join('')
       || '<tr><td colspan="6">Belum ada transaksi.</td></tr>';
@@ -822,6 +985,7 @@ function tampilHasil(l) {
   const cls = l.selisih < 0 ? 'minus' : (l.selisih > 0 ? 'lebih' : 'ok');
   const label = l.selisih < 0 ? 'Kasir MINUS ' + rp(-l.selisih) : (l.selisih > 0 ? 'Kasir lebih ' + rp(l.selisih) : 'Kasir sesuai');
   const non = (l.per.QRIS + l.per.Debit + l.per.Kredit) - (l.refPer.QRIS + l.refPer.Debit + l.refPer.Kredit);
+  const hb = l.hutangBayar || { Tunai: 0, QRIS: 0, Debit: 0, Kredit: 0 }, hbNon = hb.QRIS + hb.Debit + hb.Kredit;
   $('#tutupForm').style.display = 'none';
   const h = $('#tutupHasil'); h.style.display = 'block';
   h.innerHTML = `<div class="hasil ${cls}">${label}</div>
@@ -830,12 +994,13 @@ function tampilHasil(l) {
       <tr><td>Modal awal</td><td class="r">${rp(l.modal)}</td></tr>
       <tr><td>Penjualan tunai</td><td class="r">${rp(l.per.Tunai)}</td></tr>
       <tr><td>Refund tunai</td><td class="r">- ${rp(l.refPer.Tunai)}</td></tr>
+      ${hb.Tunai ? `<tr><td>Terima hutang tunai</td><td class="r">+ ${rp(hb.Tunai)}</td></tr>` : ''}
       <tr><td>Kas seharusnya</td><td class="r">${rp(l.seharusnya)}</td></tr>
       <tr><td>Uang di laci</td><td class="r">${rp(l.fisik)}</td></tr>
       <tr><td><b>Selisih</b></td><td class="r"><b>${rp(l.selisih)}</b></td></tr>
       ${l.catatan ? `<tr><td colspan="2">Alasan: ${esc(l.catatan)}</td></tr>` : ''}
       ${l.selisih < 0 ? `<tr><td>Diganti kasir</td><td class="r">${rp(l.ganti)}</td></tr><tr><td><b>Sisa minus</b></td><td class="r"><b>${rp(-l.selisih - l.ganti)}</b></td></tr>` : ''}
-      <tr><td colspan="2" style="color:var(--muted);font-size:12px">Non tunai bersih (tidak masuk laci): ${rp(non)}. Total ${l.jml} transaksi dan ${l.refJml} refund.</td></tr>
+      <tr><td colspan="2" style="color:var(--muted);font-size:12px">Non tunai bersih (tidak masuk laci): ${rp(non)}.${l.bon ? ' Bon (hutang) baru: ' + rp(l.bon) + '.' : ''}${hbNon ? ' Terima hutang non tunai: ' + rp(hbNon) + '.' : ''} Total ${l.jml} transaksi dan ${l.refJml} refund.</td></tr>
     </table>
     <button class="btn" id="cetakLapShift" style="margin-top:10px">Cetak laporan tutup shift</button>
     <button class="btn" id="cetakLapHarian" style="margin-top:6px">Cetak laporan harian</button>
@@ -847,8 +1012,8 @@ function tampilHasil(l) {
 }
 
 // Laporan cetak (tutup shift dan laporan harian)
-const MET = ['Tunai', 'QRIS', 'Debit', 'Kredit'];
-const perBaris = o => MET.map(m => ln('- ' + m, rp(o[m]))).join('');
+const MET = ['Tunai', 'QRIS', 'Debit', 'Kredit', 'Hutang'];
+const perBaris = o => MET.filter(m => m !== 'Hutang' || o.Hutang).map(m => ln('- ' + (m === 'Hutang' ? 'Hutang (bon)' : m), rp(o[m]))).join('');
 const refBaris = list => list.map(f => `<div>${esc(f.id)} | ${esc(f.trx)}</div>` + ln(esc(f.metode), rp(f.total)) + `<div class="rfnote">${esc(f.alasan)} | ACC: ${esc(f.approver)}</div>`).join('');
 const labelSelisih = x => x < 0 ? 'MINUS' : (x > 0 ? 'LEBIH' : 'SESUAI');
 const sekarang = () => new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
@@ -865,11 +1030,12 @@ function htmlLapShift(l) {
     (l.refList.length ? `<div class="sec">Rincian refund</div>` + refBaris(l.refList) : '') + `<hr>` +
     ln('Penjualan bersih', rp(l.net), true) + `<hr>` +
     `<div class="sec">Kas laci</div>` + ln('Modal awal', rp(l.modal)) + ln('+ Penjualan tunai', rp(l.per.Tunai)) +
-    ln('- Refund tunai', rp(l.refPer.Tunai)) + ln('Kas seharusnya', rp(l.seharusnya), true) +
+    ln('- Refund tunai', rp(l.refPer.Tunai)) + (l.hutangBayar && l.hutangBayar.Tunai ? ln('+ Terima hutang tunai', rp(l.hutangBayar.Tunai)) : '') + ln('Kas seharusnya', rp(l.seharusnya), true) +
     (tutup ? ln('Uang di laci', rp(l.fisik)) + ln('Selisih ' + labelSelisih(l.selisih), rp(l.selisih), true) +
       (l.selisih < 0 ? ln('Diganti kasir', rp(l.ganti)) + ln('Sisa minus', rp(-l.selisih - l.ganti), true) : '') : '<div>Uang di laci: belum dihitung</div>') +
     (l.catatan ? `<div>${l.selisih ? 'Alasan selisih' : 'Catatan'}: ${esc(l.catatan)}</div>` : '') +
-    `<hr><div class="rfnote">Non tunai tidak masuk laci. Dicetak ${esc(sekarang())}</div>` + ttd('Kasir', 'Admin');
+    (l.hutangBayar && (l.hutangBayar.QRIS + l.hutangBayar.Debit + l.hutangBayar.Kredit) ? `<div class="rfnote">Terima hutang non tunai: ${rp(l.hutangBayar.QRIS + l.hutangBayar.Debit + l.hutangBayar.Kredit)}</div>` : '') +
+    `<hr><div class="rfnote">Non tunai dan bon tidak masuk laci. Dicetak ${esc(sekarang())}</div>` + ttd('Kasir', 'Admin');
 }
 
 function htmlLapHarian(h) {
@@ -879,6 +1045,7 @@ function htmlLapHarian(h) {
     ln('Total transaksi (struk)', h.jml, true) + ln('TOTAL PENJUALAN', rp(h.jual), true) + `<hr>` +
     `<div class="sec">Rincian per metode pembayaran</div>` + perBaris(h.per) + ln('Total', rp(h.jual), true) +
     (h.refJml ? `<hr>` + ln('Refund (' + h.refJml + ' transaksi)', '- ' + rp(h.refund)) + ln('PENJUALAN BERSIH', rp(h.net), true) : '') +
+    ((h.terimaHutang || h.piutangTotal) ? `<hr><div class="sec">Hutang pelanggan</div>` + (h.terimaHutang ? ln('Hutang diterima hari ini', rp(h.terimaHutang)) : '') + ln('Total hutang berjalan', rp(h.piutangTotal), true) : '') +
     `<hr><div class="rfnote">Dicetak ${esc(sekarang())} oleh ${esc(h.oleh)}</div>` + ttd('Kasir', 'Admin');
 }
 
@@ -1073,11 +1240,11 @@ $('#rfProses').onclick = async () => {
   const alasan = $('#rfAlasan').value.trim();
   if (alasan.length < 3) { $('#rfAlasan').focus(); return toast('Isi alasan refund', true); }
   const total = hitungRefund();
-  if (!confirm('Proses refund ' + rp(total) + '?' + (rfTrx.metode === 'Tunai' ? ' Kembalikan uang tunai ke pelanggan.' : /^Split/.test(rfTrx.metode) ? ' Pembayaran split: bagian non tunai dibatalkan dulu lewat EDC/aplikasi, sisanya dikembalikan tunai. Rincian ada di bukti refund.' : ' Batalkan pembayaran di mesin EDC atau aplikasi QRIS secara manual.'))) return;
+  if (!confirm('Proses refund ' + rp(total) + '?' + (rfTrx.metode === 'Tunai' ? ' Kembalikan uang tunai ke pelanggan.' : rfTrx.metode === 'Hutang' ? ' Hutang pelanggan akan dikurangi (jika sudah dilunasi, uangnya dikembalikan tunai).' : /Hutang/.test(rfTrx.metode) ? ' Bagian hutang mengurangi hutang pelanggan; bagian lain sesuai rincian di bukti refund.' : /^Split/.test(rfTrx.metode) ? ' Pembayaran split: bagian non tunai dibatalkan dulu lewat EDC/aplikasi, sisanya dikembalikan tunai. Rincian ada di bukti refund.' : ' Batalkan pembayaran di mesin EDC atau aplikasi QRIS secara manual.'))) return;
   const btn = $('#rfProses'); btn.disabled = true;
   try {
     const r = await run('refund', rfTrx.trxId, items, alasan, $('#rfStok').checked, { id: $('#rfAdminId').value, pin: $('#rfAdminPin').value });
-    produk = r.produk; renderAll(); tutupRefund(); strukRefund(r); loadRiwayat(); toast('Refund berhasil diproses');
+    produk = r.produk; renderAll(); tutupRefund(); strukRefund(r); loadRiwayat(); loadPelanggan(); toast('Refund berhasil diproses');
   } catch (e) { toast(e.message, true); }
   btn.disabled = false;
 };
@@ -1486,7 +1653,7 @@ $('#srvTes').onclick = async () => {
 // Login & sesi
 function showLogin() {
   sedangHasil = false;
-  token = null; user = null; cart = {};
+  token = null; user = null; cart = {}; pelanggan = [];
   try { sessionStorage.removeItem('tk'); } catch (e) {}
   $('#ref').value = ''; setMetode('Tunai'); $('#lpin').value = ''; renderCart();
   document.querySelectorAll('.modal').forEach(m => m.classList.remove('on'));
@@ -1497,11 +1664,13 @@ async function startApp() {
   $('#login').classList.remove('on');
   updateWho();
   const admin = user.role === 'Admin';
-  document.querySelectorAll('nav button').forEach(b => { if (!['kasir', 'riwayat', 'printer'].includes(b.dataset.v)) b.style.display = admin ? '' : 'none'; });
+  document.querySelectorAll('nav button').forEach(b => { if (!['kasir', 'riwayat', 'hutang', 'printer'].includes(b.dataset.v)) b.style.display = admin ? '' : 'none'; });
   document.querySelectorAll('nav button,.view').forEach(e => e.classList.remove('on'));
   document.querySelector('nav [data-v=kasir]').classList.add('on'); $('#kasir').classList.add('on');
   try { produk = await run('getProducts'); renderAll(); } catch (e) { toast(e.message, true); }
   $('#layoutPanel').style.display = admin ? '' : 'none';
+  $('#pelForm').style.display = admin ? '' : 'none';
+  loadPelanggan();
   muatLayout();
   lewatiLama = false;
   refreshPending();
